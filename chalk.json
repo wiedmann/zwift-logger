@@ -1,26 +1,6 @@
 [
   [5, "Watopia Arch", 1, 0, 0.9828947442],
-  [17, "Watopia Green Sprint Banner", 1, 0, 0.6042982501],
-  [22, "KOM Banner", 1, 0, 0.1840789487],
-  [23, "Watopia Sprint Start Reverse",1, 0, 0.6218000000],
-  [20, "Watopia EPIC KOM Banner", 1, 6, 0.5859073837],
-  [36, "Watopia Reverse KOM Start", 1, 0, 0.3791000000],
-  [37, "Watopia Start of Sprint Forward Direction",1, 0, 0.5697000000],
-  [123, "Watopia Volcano Arch", 1, 23, 0.7861780000],
   [11, "Richmond Arch",2, 0, 0.9920043688],
-  [6, "Richmond Start of 1st Sprint", 2, 0, 0.1750000000],
-  [7, "Richmond Green Sprint Banner", 2, 0, 0.1792047951],
-  [24, "Richmond Start of Second Sprint", 2, 0, 0.3672000000],
-  [25, "Richmond Second Green Sprint Banner", 2, 0, 0.3746949935],
-  [28, "Richmond 2nd KOM Banner", 2, 0, 0.8342048027],
-  [29, "Richmond Start of 1st KOM", 2, 0, 0.6900000000],
-  [30, "Richmond 1st KOM Banner", 2, 0, 0.7651960873],
-  [151, "Watopia Volcano KOM Arch", 1, 24, 0.8178010000],
   [73, "Prudential Arch", 3, 7, 0.8040615123],
-  [75, "Palace Prudential Arch", 3, 0, 0.5277928597],
-  [77, "Fox Hill KOM Start", 3, 7, 0.0206000000],
-  [78, "Box Hill KOM Arch", 3, 7, 0.1413321697],
-  [79, "Forward Box Hill KOM Start", 3, 7, 0.3764700000],
-  [89, "Start of Mall Sprint", 3, 0, 0.5350000000],
-  [94, "Start of Mall Sprint REV", 3, 0, 0.5199000000]
+  [75, "Palace Prudential Arch", 3, 0, 0.5277928597]
 ]
