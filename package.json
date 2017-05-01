@@ -14,7 +14,7 @@
     "mysql": "^2.13.0",
     "zwift-line-monitor": "^0.1.0",
     "zwift-mobile-api": "^0.2.5",
-    "zwift-packet-monitor": "^0.1.0"
+    "zwift-packet-monitor": "^0.1.2"
   },
   "devDependencies": {},
   "repository": {

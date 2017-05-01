@@ -1,14 +1,15 @@
 const ZwiftAccount = require('zwift-mobile-api')
 const {wrappedStatus} = require('zwift-mobile-api/src/riderStatus')
 const ZwiftPacketMonitor = require('zwift-packet-monitor')
-const ZwiftLineMonitor = require('zwift-line-monitor')
+const Watcher = require('./Watcher')
 const program = require('commander')
 const mysql = require('mysql')
 const jsonfile = require('jsonfile')
 const DBWriter = require('./DBWriter')
-let zlm = new ZwiftLineMonitor()
+let watchers = []
 let worldTimeOffset = 0
 let zpm = null
+let lines
 
 program
   .version('0.1.0')
@@ -20,6 +21,7 @@ program
   .option('-P, --mysql_password <password>', 'mysql password')
   .option('-I, --interface <interface>', 'interface to monitor')
   .option('-c, --chalk <chalkfile>', 'file name of json file containing chalk line definitions')
+  .option('-r, --radius <radius>', 'radius (in cm) that each watcher is responsible - note that visibility is a box, not a circle')
   .option('-l, --list_interfaces', 'list available interfaces and exit')
   .option('-v, --verbose', 'turn on verbose mode')
   .parse(process.argv)
@@ -38,9 +40,7 @@ jsonfile.readFile(program.chalk, (err, chalklines) => {
     throw err
   }
   // id, name, wold, roadID, roadTime
-  for (line of chalklines) {
-    zlm.addLine(...line)
-  }
+  lines = chalklines
 })
 
 const account = new ZwiftAccount(program.user, program.password)
@@ -67,17 +67,38 @@ function handleCrossing (crossing) {
     crossing.groupId, crossing.rideOns, crossing.sport.toNumber()]
   console.log(data.join())
 }
-zlm.on('crossing', handleCrossing)
 
-function processPlayerState(playerState, serverWorldTime) {
-  zlm.updateRiderStatus(wrappedStatus(Object.assign({}, playerState)), serverWorldTime)
+function getWatcher(port) {
+  if (!lines) {
+    return null
+  }
+  if (!(port in watchers)) {
+    watchers[port] = new Watcher(port, lines, program.radius, program.verbose)
+    watchers[port].on('crossing', handleCrossing)
+  }
+  return watchers[port]
+}
+
+function processIncomingPlayerState(playerState, serverWorldTime, localPort) {
+  watcher = getWatcher(localPort)
+  if (watcher) {
+    watcher.processIncomingPlayerState(wrappedStatus(Object.assign({}, playerState)), serverWorldTime)
+  }
+}
+
+function processOutgoingPlayerState(playerState, serverWorldTime, localPort) {
+  watcher = getWatcher(localPort)
+  if (watcher) {
+    watcher.processOutgoingPlayerState(playerState, serverWorldTime)
+  }
 }
 
 riders = account.getWorld().riders().then(riders => {
   worldTimeOffset = (Number(riders.currentDateTime) * 1000) - Number(riders.currentWorldTime)
   dbw = new DBWriter(connection, worldTimeOffset)
   zpm = new ZwiftPacketMonitor(program.interface)
-  zpm.on('incomingPlayerState', processPlayerState)
+  zpm.on('incomingPlayerState', processIncomingPlayerState)
+  zpm.on('outgoingPlayerState', processOutgoingPlayerState)
   zpm.start()
   console.log('Monitoring network traffic.')
 }).catch(error => {
