@@ -19,7 +19,7 @@ program
   .option('-H, --mysql_host <host>', 'mysql host to connect to')
   .option('-U, --mysql_user <user>', 'mysql user name')
   .option('-P, --mysql_password <password>', 'mysql password')
-  .option('-I, --interface <interface>', 'interface to monitor')
+  .option('-I, --interface <interface>', 'interface to monitor (or IP address of that interface)')
   .option('-c, --chalk <chalkfile>', 'file name of json file containing chalk line definitions')
   .option('-r, --radius <radius>', 'radius (in cm) that each watcher is responsible - note that visibility is a box, not a circle')
   .option('-l, --list_interfaces', 'list available interfaces and exit')
