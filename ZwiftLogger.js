@@ -24,6 +24,7 @@ program
   .option('-r, --radius <radius>', 'radius (in cm) that each watcher is responsible - note that visibility is a box, not a circle')
   .option('-l, --list_interfaces', 'list available interfaces and exit')
   .option('-v, --verbose', 'turn on verbose mode')
+  .option('--loud', 'turn loud mode on - periodic status messages will be printed out')
   .parse(process.argv)
 
 
@@ -45,14 +46,14 @@ jsonfile.readFile(program.chalk, (err, chalklines) => {
 
 const account = new ZwiftAccount(program.user, program.password)
 
-const connection = mysql.createConnection({
+const connectionParameters = {
   host: program.mysql_host,
   user: program.mysql_user,
   password: program.mysql_password,
   database: program.mysql_database,
   charset: 'utf8mb4',
   timezone: 'Z',
-})
+}
 
 let dbw
 
@@ -73,7 +74,10 @@ function getWatcher(port) {
     return null
   }
   if (!(port in watchers)) {
-    watchers[port] = new Watcher(port, lines, program.radius, program.verbose)
+    if (program.loud){
+      console.log(`New watcher on port ${port}`)
+    }
+    watchers[port] = new Watcher(port, lines, program.radius, {verbose: program.verbose, loud: program.loud})
     watchers[port].on('crossing', handleCrossing)
   }
   return watchers[port]
@@ -95,7 +99,7 @@ function processOutgoingPlayerState(playerState, serverWorldTime, localPort) {
 
 riders = account.getWorld().riders().then(riders => {
   worldTimeOffset = (Number(riders.currentDateTime) * 1000) - Number(riders.currentWorldTime)
-  dbw = new DBWriter(connection, worldTimeOffset)
+  dbw = new DBWriter(connectionParameters, worldTimeOffset)
   zpm = new ZwiftPacketMonitor(program.interface)
   zpm.on('incomingPlayerState', processIncomingPlayerState)
   zpm.on('outgoingPlayerState', processOutgoingPlayerState)

@@ -2,18 +2,28 @@ const ZwiftLineMonitor = require('zwift-line-monitor')
 const EventEmitter = require('events')
 
 class Watcher extends EventEmitter {
-  constructor (port, chalklines, radius, verbose=false) {
+  constructor (port, chalklines, radius, options) {
     super()
     this._port = port
     this._radius = radius
     this._zlm = new ZwiftLineMonitor()
-    this._zlm.on('crossing', (...args) => {this.emit('crossing', ...args)})
-    if (verbose) this._zlm.setVerbose(verbose)
+    this._zlm.on('crossing', this.handleCrossing.bind(this))
+    if (options.verbose) this._zlm.setVerbose(verbose)
     this._visibilitySet = false
-    this._verbose = verbose
+    this._verbose = options.verbose
+    this._lastUpdate = 0
+    this._loud = options.loud
+    this._numCrossings = 0
+    this._numUpdates = 0
     for (let line of chalklines) {
       this._zlm.addLine(...line)
     }
+  }
+
+  handleCrossing(...args) {
+    this._numCrossings++
+    args[0].watcherId = this._watchingRiderId
+    this.emit('crossing', ...args)
   }
 
   updateVisibilityFromPlayerState(playerState) {
@@ -22,6 +32,8 @@ class Watcher extends EventEmitter {
   }
 
   processIncomingPlayerState(playerState, serverWorldTime) {
+    this._lastUpdate = new Date().getTime()
+    this._numUpdates++
     if (this._radius && this._watchingRiderId && playerState.id === this._watchingRiderId) {
       this.updateVisibilityFromPlayerState(playerState)
     }
@@ -31,6 +43,10 @@ class Watcher extends EventEmitter {
   }
 
   processOutgoingPlayerState(playerState) {
+    this._lastUpdate = new Date().getTime()
+    if (this._loud && (this._watchingRiderId !== playerState.watchingRiderId)) {
+      console.log(`Watcher on port ${this._port} watching rider ID ${playerState.watchingRiderId}`)
+    }
     this._watchingRiderId = playerState.watchingRiderId
     if (this._radius && playerState.watchingRiderId === playerState.id) {
       this.updateVisibilityFromPlayerState(playerState)
