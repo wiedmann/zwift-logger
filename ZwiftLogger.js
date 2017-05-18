@@ -29,7 +29,7 @@ program
 
 
 if (program.list_interfaces) {
-  for (var device of ZwiftLineMonitor.deviceList()) {
+  for (var device of ZwiftPacketMonitor.deviceList()) {
     console.log(`${device.name} ${device.description} ${device.addresses[0].addr}`)
   }
   return
@@ -100,6 +100,13 @@ function processOutgoingPlayerState(playerState, serverWorldTime, localPort) {
 riders = account.getWorld().riders().then(riders => {
   worldTimeOffset = (Number(riders.currentDateTime) * 1000) - Number(riders.currentWorldTime)
   dbw = new DBWriter(connectionParameters, worldTimeOffset)
+  if (program.verbose) {
+    dbw._verbose=true
+  }
+  if (program.loud) {
+    dbw._loud=true
+    dbw._verbose=true
+  }
   zpm = new ZwiftPacketMonitor(program.interface)
   zpm.on('incomingPlayerState', processIncomingPlayerState)
   zpm.on('outgoingPlayerState', processOutgoingPlayerState)
