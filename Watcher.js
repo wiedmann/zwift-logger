@@ -8,7 +8,7 @@ class Watcher extends EventEmitter {
     this._radius = radius
     this._zlm = new ZwiftLineMonitor()
     this._zlm.on('crossing', this.handleCrossing.bind(this))
-    if (options.verbose) this._zlm.setVerbose(verbose)
+    if (options.verbose) this._zlm.setVerbose(options.verbose)
     this._visibilitySet = false
     this._verbose = options.verbose
     this._lastUpdate = 0
