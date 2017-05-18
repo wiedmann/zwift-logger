@@ -14,6 +14,7 @@ class DBWriter {
     this._rows = []
     this._worldTimeOffset = worldTimeOffset
     this._verbose = false
+    this._loud = false
     this.openConnection()
   }
 
@@ -44,8 +45,13 @@ class DBWriter {
           this._reconnectTimeout = null
         }, 3000)
       } else {
+        if (this._loud || this._verbose) {
+          console.log('Connected to database')
+        }
         if (fs.existsSync(journalFilename)) {
+          console.log(`Reading journal ${journalFilename}`)
           this.readJournal()
+          console.log('Done reading journal')
         }
       }
     })
@@ -71,6 +77,9 @@ class DBWriter {
 
   flushToJournal() {
     if (this._rows.length) {
+      if (this._loud || this._verbose) {
+        console.log(`Flushing ${this._rows.length} rows to journal`)
+      }
       let fd = fs.openSync(journalFilename, 'a')
       for (let row of this._rows) {
         let crossing={}
@@ -116,7 +125,10 @@ class DBWriter {
   }
 
   flushToDB (flushToJournal = true) {
-    let sql = `INSERT IGNORE INTO live_results (${dbcolumns.join(',')}) `
+    if (this._verbose) {
+      console.log(`Flushing ${this._rows.length} rows to database`)
+    }
+    let sql = `INSERT INTO live_results (${dbcolumns.join(',')}) `
       + 'VALUES ?'
       + ' ON DUPLICATE KEY UPDATE '
     sql += dbcolumns.map(col => `${col}=VALUES(${col})`).join(',')
@@ -125,13 +137,22 @@ class DBWriter {
         if (flushToJournal) {
           this.flushToJournal()
         }
-        console.error(`Error writing data - reopening connection: ${error.sql}`)
+        console.error(`Error inserting data - reopening connection: ${error} ${error.sql}`)
         this.openConnection()
       } else {
         this._rows = []
         if (this._verbose) {
           console.log(q.sql)
         }
+      }
+    })
+    this._connection.commit((error) => {
+      if (error) {
+        if (flushToJournal) {
+          this.flushToJournal()
+        }
+        console.error(`Error committing data - reopening connection: ${error} ${error.sql}`)
+        this.openConnection()
       }
     })
   }
@@ -141,6 +162,9 @@ class DBWriter {
       if (this._connection) {
         this.flushToDB()
       } else {
+        if (this._loud) {
+          console.log(`Not connected to database - falling back to journal`)
+        }
         this.flushToJournal()
       }
     }
