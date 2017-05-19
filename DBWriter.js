@@ -2,12 +2,14 @@ const fs = require('fs')
 const readline = require('readline')
 const mysql = require('mysql')
 const dbcolumns = ['msec', 'latency', 'riderid', 'lineid', 'fwd', 'meters', 'mwh',
-  'duration', 'elevation', 'speed', 'hr', 'cad', 'grp', 'rideons', 'sport', 'road_position', 'laps', 'power']
+  'duration', 'elevation', 'speed', 'hr', 'cad', 'grp', 'rideons', 'sport', 'road_position', 'laps', 'power',
+  'monitorid']
 const journalFilename = 'zwift-logger.journal'
 
 class DBWriter {
   constructor (connectionParameters, worldTimeOffset, maxInserts = 50) {
     this._connectionParameters = connectionParameters
+    this._connectionParameters.autocommit = true
     this._connectionParameters.charset = 'utf8mb4'
     this._connectionParameters.timezone = 'Z'
     this._maxInserts = 200
@@ -15,6 +17,7 @@ class DBWriter {
     this._worldTimeOffset = worldTimeOffset
     this._verbose = false
     this._loud = false
+    this._activeLines = {}
     this.openConnection()
   }
 
@@ -57,6 +60,21 @@ class DBWriter {
     })
   }
 
+  markLinesActive() {
+    if (this._connection) {
+      let q = this._connection.query("UPDATE chalkline SET active=1, lastmonitored=now() WHERE line in (?)", [Object.keys(this._activeLines)])
+      this._connection.commit()
+      if (this._loud) {
+        console.log(q.sql)
+      }
+    } else {
+      if (this._loud) {
+        console.log('Can\'t mark lines active - no db connection')
+      }
+    }
+    this._activeLines = {}
+  }
+
   addCrossing(crossing) {
     if (!this._timeOut) {
       this._timeOut = setTimeout(() => {
@@ -64,12 +82,19 @@ class DBWriter {
         this._timeOut = null
       }, 2000)
     }
+    if (!this._lineTimeout) {
+      this._lineTimeout = setTimeout(() => {
+        this.markLinesActive()
+        this._lineTimeout = null
+      }, 1000)
+    }
+    this._activeLines[crossing.lineId] = true
     this._rows.push([Math.round(crossing.playerWorldTime + this._worldTimeOffset),
       Math.round(crossing.serverWorldTime - crossing.playerWorldTime),
       crossing.riderId, crossing.lineId, crossing.forward,
       Math.round(crossing.distance), Math.round(crossing.calories), Math.round(crossing.time), Math.round(crossing.climbing),
       Math.round(crossing.speed), Math.round(crossing.heartrate), Math.round(crossing.cadence),
-      crossing.groupId, crossing.rideOns, crossing.sport.toNumber(), crossing.roadPosition, crossing.laps, crossing.power])
+      crossing.groupId, crossing.rideOns, crossing.sport.toNumber(), crossing.roadPosition, crossing.laps, crossing.power, crossing.watcherId])
     if (this._rows.length >= this._maxInserts) {
       this.flush()
     }
