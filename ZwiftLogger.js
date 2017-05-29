@@ -6,6 +6,9 @@ const program = require('commander')
 const mysql = require('mysql')
 const jsonfile = require('jsonfile')
 const DBWriter = require('./DBWriter')
+const PowerupTracker = require('./PowerupTracker')
+
+const powerupTracker = new PowerupTracker()
 let watchers = []
 let worldTimeOffset = 0
 let zpm = null
@@ -56,16 +59,24 @@ const connectionParameters = {
 }
 
 let dbw
-
+const powerupMapping = {0: 'F', 1: 'D', 5: 'A'}
 function handleCrossing (crossing) {
   if (dbw) {
+    powerupInfo = powerupTracker.findPowerup(crossing.riderId)
+    if (powerupInfo) {
+      crossing.powerup = powerupMapping[powerupInfo.powerup]
+      crossing.powerupTime = crossing.playerWorldTime - powerupInfo.timestamp
+      if (program.loud || program.verbose) {
+        console.log(`Rider ${crossing.riderId} had powerup ${crossing.powerup} ${crossing.powerupTime} msec ago`)
+      }
+    }
     dbw.addCrossing(crossing)
   }
   let data = [Math.round(crossing.playerWorldTime + worldTimeOffset), Math.round(crossing.serverWorldTime + worldTimeOffset),
     crossing.riderId, crossing.lineId, crossing.forward,
     Math.round(crossing.distance), Math.round(crossing.calories), Math.round(crossing.time), Math.round(crossing.climbing),
     Math.round(crossing.speed), Math.round(crossing.heartrate), Math.round(crossing.cadence),
-    crossing.groupId, crossing.rideOns, crossing.sport.toNumber()]
+    crossing.groupId, crossing.rideOns, crossing.sport.toNumber(), crossing.watcherId]
   console.log(data.join())
 }
 
@@ -85,8 +96,12 @@ function getWatcher(port) {
 
 function processIncomingPlayerState(playerState, serverWorldTime, localPort) {
   watcher = getWatcher(localPort)
+  const riderStatus = wrappedStatus(Object.assign({}, playerState))
   if (watcher) {
-    watcher.processIncomingPlayerState(wrappedStatus(Object.assign({}, playerState)), serverWorldTime)
+    watcher.processIncomingPlayerState(riderStatus, serverWorldTime)
+  }
+  if (riderStatus.powerup != 15) {
+    powerupTracker.addPowerup(riderStatus.id, riderStatus.powerup, riderStatus.worldTime.toNumber())
   }
 }
 

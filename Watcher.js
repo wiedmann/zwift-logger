@@ -16,7 +16,11 @@ class Watcher extends EventEmitter {
     this._numCrossings = 0
     this._numUpdates = 0
     for (let line of chalklines) {
-      this._zlm.addLine(...line)
+      if (line[0] === 'distance') {
+        this._zlm.addDistanceMark(...line.slice(1))
+      } else {
+        this._zlm.addLine(...line)
+      }
     }
   }
 

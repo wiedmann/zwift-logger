@@ -22,5 +22,6 @@
   [78, "Box Hill KOM Arch", 3, 7, 0.1413321697],
   [79, "Forward Box Hill KOM Start", 3, 7, 0.3764700000],
   [89, "Start of Mall Sprint", 3, 0, 0.5350000000],
-  [94, "Start of Mall Sprint REV", 3, 0, 0.5199000000]
+  [94, "Start of Mall Sprint REV", 3, 0, 0.5199000000],
+  ["distance", 1001, "5km mark", 5000]
 ]

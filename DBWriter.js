@@ -3,7 +3,7 @@ const readline = require('readline')
 const mysql = require('mysql')
 const dbcolumns = ['msec', 'latency', 'riderid', 'lineid', 'fwd', 'meters', 'mwh',
   'duration', 'elevation', 'speed', 'hr', 'cad', 'grp', 'rideons', 'sport', 'road_position', 'laps', 'power',
-  'monitorid']
+  'monitorid', 'lpup', 'pup']
 const journalFilename = 'zwift-logger.journal'
 
 class DBWriter {
@@ -90,11 +90,12 @@ class DBWriter {
     }
     this._activeLines[crossing.lineId] = true
     this._rows.push([Math.round(crossing.playerWorldTime + this._worldTimeOffset),
-      Math.round(crossing.serverWorldTime - crossing.playerWorldTime),
+      Math.min(Math.max(Math.round(crossing.serverWorldTime - crossing.playerWorldTime), -32768), 32767),
       crossing.riderId, crossing.lineId, crossing.forward,
       Math.round(crossing.distance), Math.round(crossing.calories), Math.round(crossing.time), Math.round(crossing.climbing),
       Math.round(crossing.speed), Math.round(crossing.heartrate), Math.round(crossing.cadence),
-      crossing.groupId, crossing.rideOns, crossing.sport.toNumber(), crossing.roadPosition, crossing.laps, crossing.power, crossing.watcherId])
+      crossing.groupId, crossing.rideOns, crossing.sport.toNumber(), crossing.roadPosition, crossing.laps, crossing.power,
+      crossing.watcherId, crossing.powerupTime, crossing.powerup])
     if (this._rows.length >= this._maxInserts) {
       this.flush()
     }
@@ -125,14 +126,16 @@ class DBWriter {
     })
     rl.on('line', (line) => {
       let obj = JSON.parse(line)
-      let row = dbcolumns.map(val => obj[val])
+      let row = dbcolumns.map(val => val === 'latency' ? obj[val] & 0xffff : obj[val])
       this._rows.push(row)
+/*
       if (this._connection && this._rows.length >= this._maxInserts) {
         this.flushToDB(false)
       }
       if (! this._connection) {
         return
       }
+ */
     })
     rl.on('close', () => {
       if (this._connection) {
@@ -144,7 +147,11 @@ class DBWriter {
         while (fs.existsSync(newname = `${journalFilename}.bak.${counter}`)) {
           counter++
         }
-        fs.renameSync(journalFilename, newname)
+        try {
+          fs.renameSync(journalFilename, newname)
+        } catch (e) {
+          console.warn(`Warning: ${e} ${e.stack}`)
+        }
       }
     })
   }
@@ -161,6 +168,8 @@ class DBWriter {
       if (error) {
         if (flushToJournal) {
           this.flushToJournal()
+        } else {
+          this._rows = []
         }
         console.error(`Error inserting data - reopening connection: ${error} ${error.sql}`)
         this.openConnection()
